@@ -120,8 +120,11 @@ BOOL usingMATrackingArea = NO;
 		_hasHDH264Version = NO;
 		_contextMenuIsVisible = NO;
 		_embeddedYouTubeView = NO;
-		_isSIFR = NO;
+<<<<<<< HEAD
 		_youTubeAutoPlay = NO;
+=======
+		_isSIFR = NO;
+>>>>>>> 375470c4c7bcd90701abc0d1a27644de9ce245fc
 		_delayingTimer = nil;
 		defaultWhitelist = [NSArray arrayWithObjects:	@"com.apple.frontrow",
 														@"com.apple.dashboard.client",
@@ -1340,7 +1343,9 @@ didReceiveResponse:(NSHTTPURLResponse *)response
 		[ element setAttribute: @"autoplay" value:@"autoplay"];
 	}
 	[ element setAttribute: @"controls" value:@"controls"];
-	
+	// make videos with the wrong aspect ratio look more letterboxed. Would it be better or worse to just change the element's size?
+	[ element setAttribute: @"style" value :@"background:#111"]; 	
+
 	DOMElement* container = [self container];
 	
 	[ element setAttribute:@"width" value:[ NSString stringWithFormat:@"%dpx", [ container clientWidth ]]];
@@ -1509,6 +1514,18 @@ didReceiveResponse:(NSHTTPURLResponse *)response
 	[openInQTPlayerScript release];
 }
 
+- (void)_didRetrieveEmbeddedPlayerFlashVars:(NSDictionary *)flashVars
+{
+	if (flashVars)
+	{
+		_flashVars = [flashVars retain];
+		NSString *videoId = [self flashvarWithName:@"video_id"];
+		[self setVideoId:videoId];
+	}
+	
+	[self _checkForH264VideoVariants];
+}
+
 - (void)_retrieveEmbeddedPlayerFlashVarsAndCheckForVariantsWithVideoId:(NSString *)videoId
 {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -1518,13 +1535,13 @@ didReceiveResponse:(NSHTTPURLResponse *)response
 	NSString *pageSourceString = [NSString stringWithContentsOfURL:YouTubePageURL
 													  usedEncoding:nil
 															 error:&pageSourceError];
-	if (! pageSourceError) {
-		_flashVars = [[self _flashVarDictionaryFromYouTubePageHTML:pageSourceString] retain];
-		_videoId = [self flashvarWithName:@"video_id"];
+	NSDictionary *flashVars = nil;
+	if (pageSourceString && !pageSourceError) {
+		flashVars = [self _flashVarDictionaryFromYouTubePageHTML:pageSourceString];
 	}
 	
-	[self performSelectorOnMainThread:@selector(_checkForH264VideoVariants)
-						   withObject:nil
+	[self performSelectorOnMainThread:@selector(_didRetrieveEmbeddedPlayerFlashVars:)
+						   withObject:flashVars
 						waitUntilDone:NO];
 	
 	[pool drain];
